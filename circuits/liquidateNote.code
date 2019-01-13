@@ -1,6 +1,8 @@
 import "LIBSNARK/sha256packed"
 
 def main(field nh0, field nh1, field value, private field pk0, private field pk1, private field nonce) -> (field):
+  // get public key corresponding to private key
+  // circuit for above hasn't been implemented as yet, so sending in the public key instead for PoC
   h0, h1 = sha256packed(pk0, pk1, value, nonce)
   h0 == nh0
   h1 == nh1

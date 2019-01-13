@@ -1,14 +1,12 @@
 pragma solidity ^0.4.25;
 
 import 'openzeppelin-solidity/contracts/token/ERC20/ERC20.sol';
-import {Verifier as CreateNoteVerifier} from "./verifiers/CreateNoteVerifier.sol";
+import "./MintNotes.sol";
+import "./SpendNotes.sol";
 
-contract ZkDai is CreateNoteVerifier {
-
+contract ZkDai is MintNotes, SpendNotes {
   ERC20 internal DAI_TOKEN_ADDRESS;
 
-  uint256 public cooldown;
-  uint256 public stake;
   constructor(uint256 _cooldown, uint256 _stake, address daiTokenAddress)
     public {
       cooldown = _cooldown;
@@ -16,23 +14,12 @@ contract ZkDai is CreateNoteVerifier {
       DAI_TOKEN_ADDRESS = ERC20(daiTokenAddress);
   }
 
-  struct Submission {
-    bytes32 proofHash;
-    uint256 submittedAt;
-    address submitter;
-  }
-
-  enum State {Invalid, Submitted, Committed, Challenged, Spent}
-  struct Note {
-    Submission submission;
-    State state;
-  }
-  mapping(bytes32 => Note) public notes;
-  
-  event NoteStateChange(bytes32 note, State state);
-  event Submitted(address submitter, bytes32 note, bytes32 proofHash);
-
-  function submitNewNote(
+  /**
+  * @dev Transfers specified number of dai tokens to itself and submits the zkSnark proof to mint a new note
+  * @notice params: a, a_p, b, b_p, c, c_p, h, k zkSnark parameters
+  * @param input Public inputs of the zkSnark
+  */
+  function mint(
       uint[2] a,
       uint[2] a_p,
       uint[2][2] b,
@@ -44,37 +31,100 @@ contract ZkDai is CreateNoteVerifier {
       uint[4] input)
     external
     payable {
+      // check that the first note (among public params) is not already minted 
+      bytes32 note = calcNoteHash(input[0], input[1]);
+      require(notes[note] == State.Invalid, 'Note was already minted');
       require(msg.value == stake, 'Invalid stake amount');
-      // require(
-      //   DAI_TOKEN_ADDRESS.transfer(msg.sender, uint256(input[2]) /* value */),
-      //   'daiToken transfer failed'
-      // );
-      bytes32 proofHash = getProofHash(a, a_p, b, b_p, c, c_p, h, k, input);
-      Submission memory submission = Submission(proofHash, now, msg.sender);
-      bytes32 note = _calcNoteHash(input[0], input[1]);
-      notes[note] = Note(submission, State.Submitted);
-      emit NoteStateChange(note, State.Submitted);
-      emit Submitted(msg.sender, note, proofHash);
+      require(
+        DAI_TOKEN_ADDRESS.transferFrom(msg.sender, address(this), uint256(input[2]) /* value */),
+        'daiToken transfer failed'
+      );
+      MintNotes.submit(a, a_p, b, b_p, c, c_p, h, k, input);
   }
 
-  function commit(bytes32 _note) 
-    public {
-      Note storage note = notes[_note];
-      require(note.state == State.Submitted, 'Note needs to be in the submitted state to be committed');
-      require(note.submission.submittedAt + cooldown < now, 'Note is still HOT!');
-      _commit(_note);
+  /**
+  * @dev Submits the zkSnark proof to be able to spend a note and create two new notes
+  * @notice params: a, a_p, b, b_p, c, c_p, h, k zkSnark parameters
+  * @param input Public inputs of the zkSnark
+  */
+  function spend(
+      uint[2] a,
+      uint[2] a_p,
+      uint[2][2] b,
+      uint[2] b_p,
+      uint[2] c,
+      uint[2] c_p,
+      uint[2] h,
+      uint[2] k,
+      uint[7] input)
+    external
+    payable {
+      // check that the first note (among public params) is committed 
+      bytes32 note0 = calcNoteHash(input[0], input[1]);
+      require(notes[note0] == State.Committed, 'Note is either invalid or already spent');
+
+      // new notes should not be existing at this point
+      bytes32 note1 = calcNoteHash(input[2], input[3]);
+      require(notes[note1] == State.Invalid, 'output note1 is already minted');
+
+      bytes32 note2 = calcNoteHash(input[4], input[5]);
+      require(notes[note2] == State.Invalid, 'output note2 is already minted');
+
+      require(msg.value == stake, 'Invalid stake amount');
+      SpendNotes.submit(a, a_p, b, b_p, c, c_p, h, k, input);
   }
 
-  function _commit(bytes32 _note)
-    internal {
-      Note storage note = notes[_note];
-      note.state = State.Committed;
-      note.submission.submitter.transfer(stake);
-      emit NoteStateChange(_note, State.Committed);
-  }
-
+  /**
+  * @dev Challenge the mint or spend proofs and claim the stake amount if challenge passes.
+  * @notice If challenge passes, the challenger claims the stake amount,
+  *         otherwise note(s) are committed/spent and stake is transferred back to proof submitter.
+  * @notice params: a, a_p, b, b_p, c, c_p, h, k zkSnark parameters of the challenged proof
+  */
   function challenge(
-      bytes32 _note,
+      uint[2] a,
+      uint[2] a_p,
+      uint[2][2] b,
+      uint[2] b_p,
+      uint[2] c,
+      uint[2] c_p,
+      uint[2] h,
+      uint[2] k)
+    external {
+      bytes32 proofHash = getProofHash(a, a_p, b, b_p, c, c_p, h, k);
+      Submission storage submission = submissions[proofHash];
+      require(submission.sType != SubmissionType.Invalid, 'Corresponding hash of proof doesnt exist');
+      require(submission.submittedAt + cooldown >= now, 'Note cannot be challenged anymore');
+      if (submission.sType == SubmissionType.Mint) {
+        MintNotes.challenge(a, a_p, b, b_p, c, c_p, h, k, proofHash);
+      } else if (submission.sType == SubmissionType.Spend) {
+        SpendNotes.challenge(a, a_p, b, b_p, c, c_p, h, k, proofHash);
+      }
+  }
+
+  /**
+  * @dev Commit a particular proof once the challenge period has ended
+  * @param proofHash Hash of the proof that needs to be committed
+  */
+  function commit(bytes32 proofHash)
+    public {
+      Submission storage submission = submissions[proofHash];
+      require(submission.sType != SubmissionType.Invalid, 'proofHash is invalid');
+      require(submission.submittedAt + cooldown < now, 'Note is still hot');
+      if (submission.sType == SubmissionType.Mint) {
+        mintCommit(proofHash);
+      } else if (submission.sType == SubmissionType.Spend) {
+        spendCommit(proofHash);
+      }
+  }
+
+  /**
+  * @dev Liquidate a note to transfer the equivalent amount of dai to the recipient
+  * @param to Recipient of the dai tokens
+  * @notice params: a, a_p, b, b_p, c, c_p, h, k zkSnark parameters
+  * @param input Public inputs of the zkSnark
+  */
+  function liquidate(
+      address to,
       uint[2] a,
       uint[2] a_p,
       uint[2][2] b,
@@ -85,62 +135,19 @@ contract ZkDai is CreateNoteVerifier {
       uint[2] k,
       uint[4] input)
     external {
-      Note storage note = notes[_note];
-      require(note.state == State.Submitted, 'Note needs to be in the Submitted state to be challenged');
-
-      Submission storage submission = note.submission;
-      require(submission.submittedAt + cooldown >= now);
-
-      bytes32 proofHash = getProofHash(a, a_p, b, b_p, c, c_p, h, k, input);
-      require(submission.proofHash == proofHash, 'Challenged proof is different from what was submitted');
-      if (!CreateNoteVerifier.verifyTx(a, a_p, b, b_p, c, c_p, h, k, input)) {
-        // challenge passed
-        note.state = State.Challenged;
-        msg.sender.transfer(stake);
-        emit NoteStateChange(_note, State.Challenged);
-      } else {
-        // challenge failed
-        _commit(_note);
-      }
-  }
-
-  function getProofHash(
-      uint[2] a,
-      uint[2] a_p,
-      uint[2][2] b,
-      uint[2] b_p,
-      uint[2] c,
-      uint[2] c_p,
-      uint[2] h,
-      uint[2] k,
-      uint[4] input)
-    internal
-    pure
-    returns(bytes32) {
-      return keccak256(abi.encodePacked(a, a_p, b, b_p, c, c_p, h, k, input));
-  }
-
-  function _calcNoteHash(uint _a, uint _b)
-    internal
-    pure
-    returns(bytes32 note) {
-      bytes16 a = bytes16(_a);
-      bytes16 b = bytes16(_b);
-      bytes memory _note = new bytes(32);
-      
-      for (uint i = 0; i < 16; i++) {
-        _note[i] = a[i];
-        _note[16 + i] = b[i];
-      }
-      note = _bytesToBytes32(_note, 0);
-  }
-
-  function _bytesToBytes32(bytes b, uint offset)
-    internal
-    pure
-    returns (bytes32 out) {
-      for (uint i = 0; i < 32; i++) {
-        out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);
-      }
+      // zk circuit for mint and liquidate is same
+      // doesnt use the optimist pattern
+      require(
+        mintVerifyTx(a, a_p, b, b_p, c, c_p, h, k, input),
+        'Invalid zk proof'
+      );
+      bytes32 note = calcNoteHash(input[0], input[1]);
+      require(notes[note] == State.Committed, 'Note is either invalid or already spent');
+      notes[note] = State.Spent;
+      require(
+        DAI_TOKEN_ADDRESS.transfer(to, uint256(input[2]) /* value */),
+        'daiToken transfer failed'
+      );
+      emit NoteStateChange(note, State.Spent);
   }
 }

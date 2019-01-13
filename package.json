@@ -4,13 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "truffle compile",
+    "migrate": "truffle migrate --reset",
+    "test": "truffle test"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "openzeppelin-solidity": "^2.0.0",
-    "truffle": "^5.0.1"
+    "truffle": "^5.0.0-beta.1"
   },
   "dependencies": {
     "eccrypto": "^1.1.0",

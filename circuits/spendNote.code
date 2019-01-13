@@ -1,0 +1,20 @@
+import "LIBSNARK/sha256packed"
+
+def main(field oh0, field oh1, private field pk0, private field pk1, private field oVal, private field oNonce, field n0h0, field n0h1, private field rpk0, private field rpk1, private field n0Val, private field n0Nonce, field n1h0, field n1h1, private field n1rpk0, private field n1rpk1, private field n1Val, private field n1Nonce) -> (field):
+  oVal == n0Val + n1Val
+
+  // get public key corresponding to private key
+  // circuit for above hasn't been implemented as yet, so directly using the private key for PoC
+  h0, h1 = sha256packed(pk0, pk1, oVal, oNonce)
+  oh0 == h0
+  oh1 == h1
+
+  h0, h1 = sha256packed(rpk0, rpk1, n0Val, n0Nonce)
+  n0h0 == h0
+  n0h1 == h1
+
+  h0, h1 = sha256packed(n1rpk0, n1rpk1, n1Val, n1Nonce)
+  n1h0 == h0
+  n1h1 == h1
+
+  return 1
