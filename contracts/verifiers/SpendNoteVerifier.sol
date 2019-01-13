@@ -5,7 +5,7 @@ pragma solidity ^0.4.19;
 import "./VerifierBase.sol";
 
 contract Verifier is VerifierBase {
-    function verifyingKey() pure internal returns (VerifyingKey vk) {
+    function spendVerifyingKey() pure internal returns (VerifyingKey vk) {
         vk.A = Pairing.G2Point([0x193a25522e4666a16dfb4f7285a05b1642818245d89273aed37fc0554a199290, 0xc747f047f62d5d6037b1a1373f56deaee0323ce06208821425b3950e62affc8], [0xdf86086ba0df055cbe87617880d4a80db90bf75f2253e6e7a900b595702fb2, 0xf1d114525dac6628347abe1b2fa7032f53bf977615c38c3c985562b78d75bb4]);
         vk.B = Pairing.G1Point(0xa49150c2f12e4475359561b161a1b14230e2fb46972bd5ce8aa06b195eede98, 0x25bd56a0be2ecb00e5a836baa8fff578a26bf062db3f4cd5ef436ed7a4a113ae);
         vk.C = Pairing.G2Point([0x13b3172fc045b8808d759a1c1262f1e5be7b9114326ef5cc56336e14653a51c, 0x28e424f2815a6cc35ce44b50d00d1805d450728eb4853ca9910a49476ea4f90a], [0x2dd6b3e21c4a3d1a4319ce32b0e2f09e180b7b014dfd4a67eae878d030163669, 0x20139f0c751eaba04c14ab26730df9aff3068994d91b0a3fe2dfcfb55154baef]);
@@ -23,8 +23,10 @@ contract Verifier is VerifierBase {
         vk.IC[6] = Pairing.G1Point(0xd9c28df7c3490fb38c875f57dba43f0f9ca42ff5b37cd21f5ed7670abbf92b6, 0x1417e85eb61c94e33bcfc3de4ad77bd94f4c0766550000cb0753833543f534af);
         vk.IC[7] = Pairing.G1Point(0x101b79a69c007e945b2273f09b9250406a01ba20b2fff42d39a06a5dccf00f63, 0x209d7dca4d5fa97f3c19fe74018c2efd908c303f3e189c8ff3e1f307b1c2bda8);
     }
-    function verify(uint[] input, Proof proof) internal returns (uint) {
-        VerifyingKey memory vk = verifyingKey();
+    event YOYOs(string where);
+    function spendVerify(uint[] input, Proof proof) internal returns (uint) {
+        emit YOYOs('in svn');
+        VerifyingKey memory vk = spendVerifyingKey();
         require(input.length + 1 == vk.IC.length);
         // Compute the linear combination vk_x
         Pairing.G1Point memory vk_x = Pairing.G1Point(0, 0);
@@ -47,7 +49,7 @@ contract Verifier is VerifierBase {
         return 0;
     }
     event Verified(string s);
-    function verifyTx(
+    function spendVerifyTx(
             uint[2] a,
             uint[2] a_p,
             uint[2][2] b,
@@ -71,7 +73,7 @@ contract Verifier is VerifierBase {
         for(uint i = 0; i < input.length; i++){
             inputValues[i] = input[i];
         }
-        if (verify(inputValues, proof) == 0) {
+        if (spendVerify(inputValues, proof) == 0) {
             emit Verified("Transaction successfully verified.");
             return true;
         } else {

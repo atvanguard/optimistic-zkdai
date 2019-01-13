@@ -18,29 +18,18 @@ contract SpendNotes is SpendNoteVerifier, ZkDaiBase {
       uint[2] k,
       uint[7] input)
     internal {
-      // check first note (among public params) is valid and unspent 
-      bytes32 note = calcNoteHash(input[0], input[1]);
-      require(notes[note] == State.Committed, 'Note is either invalid or already spent');
-      
       bytes32 proofHash = getProofHash(a, a_p, b, b_p, c, c_p, h, k);
       uint256[] memory publicInput = new uint256[](7);
       for(uint8 i = 0; i < NUM_PUBLIC_INPUTS; i++) {
         publicInput[i] = input[i];
       }
-      submissions[proofHash] = Submission(now, msg.sender, publicInput);
+      submissions[proofHash] = Submission(msg.sender, SubmissionType.Spend, now, publicInput);
       emit Submitted(msg.sender, proofHash);
   }
 
-  function commit(bytes32 proofHash)
+  function spendCommit(bytes32 proofHash)
     internal {
-      Submission storage submission = submissions[proofHash];
-      require(submission.submitter != address(0x0), 'Corresponding hash of proof doesnt exist');
-      require(submission.submittedAt + cooldown < now, 'Note is still hot');
-      _commit(proofHash);
-  }
-
-  function _commit(bytes32 proofHash)
-    internal {
+      require(false, 'haha1');
       Submission storage submission = submissions[proofHash];
       bytes32[3] memory _notes = get3Notes(submission.publicInput);
       notes[_notes[0]] = State.Spent;
@@ -69,24 +58,22 @@ contract SpendNotes is SpendNoteVerifier, ZkDaiBase {
       uint[2] c,
       uint[2] c_p,
       uint[2] h,
-      uint[2] k)
-    external {
-      bytes32 proofHash = getProofHash(a, a_p, b, b_p, c, c_p, h, k);
+      uint[2] k,
+      bytes32 proofHash)
+    internal {
       Submission storage submission = submissions[proofHash];
-      require(submission.submitter != address(0x0), 'Corresponding hash of proof doesnt exist');
-      require(submission.submittedAt + cooldown >= now, 'Note cannot be challenged anymore');
       uint256[NUM_PUBLIC_INPUTS] memory input;
       for(uint i = 0; i < NUM_PUBLIC_INPUTS; i++) {
         input[i] = submission.publicInput[i];
       }
-      if (!SpendNoteVerifier.verifyTx(a, a_p, b, b_p, c, c_p, h, k, input)) {
+      if (spendVerifyTx(a, a_p, b, b_p, c, c_p, h, k, input)) {
         // challenge passed
         delete submissions[proofHash];
         msg.sender.transfer(stake);
         emit Challenged(msg.sender, proofHash);
       } else {
         // challenge failed
-        _commit(proofHash);
+        spendCommit(proofHash);
       }
   }
 }

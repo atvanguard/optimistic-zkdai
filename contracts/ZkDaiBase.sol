@@ -4,12 +4,14 @@ contract ZkDaiBase {
   uint256 public cooldown;
   uint256 public stake;
 
+  enum SubmissionType {Invalid, Create, Spend}
   struct Submission {
-    uint256 submittedAt;
     address submitter;
+    SubmissionType sType;
+    uint256 submittedAt;
     uint256[] publicInput;
   }
-  mapping(bytes32 => Submission) submissions;
+  mapping(bytes32 => Submission) public submissions;
 
   enum State {Invalid, Committed, Spent}
   mapping(bytes32 => State) public notes;

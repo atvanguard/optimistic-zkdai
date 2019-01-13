@@ -39,11 +39,11 @@ getCreateNoteParams(
   'c517f646255d5492089b881965cbd3da' // nonce
 )
 
-getCreateNoteParams(
-  '1aba488300a9d7297a315d127837be4219107c62c61966ecdf7a75431d75cc61', // private key,
-  '5', // value
-  'c517f646255d5492089b881965cbd3da' // nonce
-)
+// getCreateNoteParams(
+//   '1aba488300a9d7297a315d127837be4219107c62c61966ecdf7a75431d75cc61', // private key,
+//   '5', // value
+//   'c517f646255d5492089b881965cbd3da' // nonce
+// )
 
 // let h = 'A9FC874499C86F478409402F9C8A0E2395D16E3455A1284B3AA136EFA47F3EBA'
 // printZokratesCommand([h.slice(0, 32), h.slice(32)])

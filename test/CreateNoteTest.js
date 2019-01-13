@@ -1,56 +1,93 @@
 const ZkDai = artifacts.require("ZkDai");
-const fs = require('fs');
-const BN = require('bn.js');
-const crypto = require('crypto');
+const MockDai = artifacts.require("MockDai");
+const util = require('./util')
 
-contract('createNote', function(accounts) {
-  it.only('challenge fails for correct proof', async function() {
-    let instance = await ZkDai.deployed();
-    const proof = parseProof('./test/createNoteProof.json');
+const SCALING_FACTOR = 10**18;
 
-    // console.log('calling verifyTx with proof', proof);
-    const submit = await instance.submitNewNote(...proof, {value: 10**18});
-    // console.dir(submit, {depth: null})
+contract('mintNote', function(accounts) {
+  let dai, zkdai;
 
-    const note = submit.logs[1].args.note;
-    console.log('note', note)
-    const challenge = await instance.challenge(note, ...proof);
-    console.dir(challenge, {depth: null})
+  // Initial setup
+  before(async () => {
+    dai = await MockDai.new();
+  })
+
+  beforeEach(async () => {
+    zkdai = await ZkDai.new(100, 10**18, dai.address);
+  })
+
+  it('transfers dai and mints note', async function() {
+    // check dai balance and approve the zkdai contract to be able to move tokens
+    assert.equal(100 * SCALING_FACTOR, await dai.balanceOf.call(accounts[0]), '100 dai tokens were not assigned to the 1st account');
+    assert.equal(0, await dai.balanceOf.call(zkdai.address), 'Zkdai contract should have 0 dai tokens');
+    await dai.approve(zkdai.address, 5 * SCALING_FACTOR);
+    
+    const proof = util.parseProof('./test/mintNoteProof.json');
+    // the zk proof corresponds to a secret note of value 5
+    const mint = await zkdai.mint(...proof, {value: 10**18});
+    assert.equal(5, await dai.balanceOf.call(zkdai.address), 'Zkdai contract should have 5 dai tokens');
+    assertEvent(mint.logs[0], 'Submitted', accounts[0], '0x3058b699c6de80b950400d2451707e836ed988f0f8e73ea8dee2826009562247')
+
+    // const submission = await zkdai.submissions.call(submitNewNote.logs[0].args.proofHash);
+    // console.dir(submission, {depth: null});
+  })
+
+  it('challenge fails for correct proof', async function() {
+    const proof = util.parseProof('./test/mintNoteProof.json');
+    await dai.approve(zkdai.address, 5 * SCALING_FACTOR);
+    // console.log('calling verify with', ...proof)
+    const mint = await zkdai.mint(...proof, {value: 10**18});
+    // console.dir(mint, {depth: null});
+
+    const params = proof.slice(0, proof.length - 1);
+    // console.log(...params)
+    const challenge = await zkdai.challenge(...params); // omit sending public params again
+    // console.dir(challenge, {depth: null});
+
+    assert.equal(challenge.logs[1].event, 'NoteStateChange')
+    // @todo assert on challenge.logs[1].args.note
+    assert.equal(challenge.logs[1].args.state, 1 /* committed */)
   })
 
   it('challenge passes for incorrect proof', async function() {
-    let instance = await ZkDai.deployed();
-    const proof = parseProof('./test/createNoteProof.json');
-    const zkpHigherValue = parseProof('./test/createNoteProof_invalid.json');
-
+    const proof = util.parseProof('./test/mintNoteProof.json');
+    const zkpHigherValue = util.parseProof('./test/mintNoteProof_invalid.json');
+    await dai.approve(zkdai.address, 5 * SCALING_FACTOR);
+    
     // try sending in a note hash of higher value (invalid proof)
     proof[0] = zkpHigherValue[0]
-    const submit = await instance.submitNewNote(...proof, {value: 10**18});
-    console.dir(submit, {depth: null})
+    const mint = await zkdai.mint(...proof, {value: 10**18});
+    const proofHash = mint.logs[0].args.proofHash;
 
-    const note = submit.logs[1].args.note;
-    const challenge = await instance.challenge(note, ...proof, {from: accounts[1]});
-    console.dir(challenge, {depth: null})
+    const params = proof.slice(0, proof.length - 1);
+    const challenge = await zkdai.challenge(...params); // omit sending public params again
+    // console.dir(challenge, {depth: null});
+
+    assert.equal(challenge.logs[0].event, 'Challenged')
+    assert.equal(challenge.logs[0].args.proofHash, proofHash)
+  })
+
+  it('can not be challenged after cooldown period');
+  
+  it.only('commit', async function() {
+    zkdai = await ZkDai.new(0 /* low cooldown */, 10**18, dai.address);
+    const proof = util.parseProof('./test/mintNoteProof.json');
+    await dai.approve(zkdai.address, 5 * SCALING_FACTOR);
+    const mint = await zkdai.mint(...proof, {value: 10**18});
+    const proofHash = mint.logs[0].args.proofHash;
+
+    await util.sleep(1);
+    const commit = await zkdai.commit(proofHash);
+    assert.equal(commit.logs[0].event, 'NoteStateChange')
+    assert.equal(commit.logs[0].args.state, 1 /* committed */)
+    // console.dir(commit, {depth: null});
   })
 })
 
-const rx2 = /([0-9]+)[,]/gm
-function parseProof(file) {
-  let proofJson = fs.readFileSync(file, 'utf8');
-  proofJson.match(rx2).forEach(p => {
-    proofJson = proofJson.replace(p, `"${p.slice(0, p.length-1)}",`)
+function assertEvent(event, type, ...args) {
+  assert.equal(event.event, type);
+  args.forEach((arg, i) => {
+    // console.log(event.args[i])
+    assert.equal(event.args[i], arg);
   })
-  proofJson = JSON.parse(proofJson);
-
-  const proof = proofJson.proof;
-  const input = proofJson.input;
-  input.forEach((i, key) => {
-    if (typeof i == 'number') i = i.toString();
-    input[key] = '0x' + new BN(i, 10).toString('hex')
-  })
-
-  const _proof = [];
-  Object.keys(proof).forEach(key => _proof.push(proof[key]));
-  _proof.push(input);
-  return _proof;
 }

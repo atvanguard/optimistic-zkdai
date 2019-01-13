@@ -20,7 +20,9 @@ contract Verifier is VerifierBase {
         vk.IC[3] = Pairing.G1Point(0x1a2c1c2765d4d960ffe0759c15d1f389b49c629b020bc83e1115a15e9d1de5a9, 0x2beb4572d6c18d9333ecc362e5e96ee36fa70ba2dd875373ced86f3e0c28b6e1);
         vk.IC[4] = Pairing.G1Point(0x1ec6bf59915888ecc0856a82c577c30de1b88974a7f7e7dd5ef8ee60f3a30345, 0x2762a7f688526b21a71fedcfae5327c4054a23215e205c04ea8d38ea240bb2de);
     }
+    event YOYOs(string where);
     function verify(uint[] input, Proof proof) internal returns (uint) {
+    emit YOYOs('in lvn');
         VerifyingKey memory vk = verifyingKey();
         require(input.length + 1 == vk.IC.length);
         // Compute the linear combination vk_x
