@@ -6,7 +6,10 @@ import "./ZkDaiBase.sol";
 contract SpendNotes is SpendNoteVerifier, ZkDaiBase {
   uint8 internal constant NUM_PUBLIC_INPUTS = 7;
 
-  event Submitted(address indexed submitter, bytes32 proofHash);
+  /**
+  * @dev Hashes the submitted proof and adds it to the submissions mapping that tracks
+  *      submission time, type, public inputs of the zkSnark and the submitter
+  */
   function submit(
       uint[2] a,
       uint[2] a_p,
@@ -27,6 +30,10 @@ contract SpendNotes is SpendNoteVerifier, ZkDaiBase {
       emit Submitted(msg.sender, proofHash);
   }
 
+  /**
+  * @dev Commits the proof i.e. Marks the input note as Spent and mints two new output notes that came with the proof.
+  * @param proofHash Hash of the proof to be committed
+  */
   function spendCommit(bytes32 proofHash)
     internal {
       Submission storage submission = submissions[proofHash];
@@ -42,13 +49,20 @@ contract SpendNotes is SpendNoteVerifier, ZkDaiBase {
       emit NoteStateChange(_notes[2], State.Committed);
   }
 
-  function get3Notes(uint[] input) internal pure returns(bytes32[3] notes) {
-    notes[0] = calcNoteHash(input[0], input[1]);
-    notes[1] = calcNoteHash(input[2], input[3]);
-    notes[2] = calcNoteHash(input[4], input[5]);
+  function get3Notes(uint[] input)
+    internal
+    pure
+    returns(bytes32[3] notes) {
+      notes[0] = calcNoteHash(input[0], input[1]);
+      notes[1] = calcNoteHash(input[2], input[3]);
+      notes[2] = calcNoteHash(input[4], input[5]);
   }
 
-  event Challenged(address indexed challenger, bytes32 proofHash);
+  /**
+  * @dev Challenge the proof for spend step
+  * @notice params: a, a_p, b, b_p, c, c_p, h, k zkSnark parameters of the challenged proof
+  * @param proofHash Hash of the proof
+  */
   function challenge(
       uint[2] a,
       uint[2] a_p,
@@ -68,7 +82,7 @@ contract SpendNotes is SpendNoteVerifier, ZkDaiBase {
       if (!spendVerifyTx(a, a_p, b, b_p, c, c_p, h, k, input)) {
         // challenge passed
         delete submissions[proofHash];
-        // msg.sender.transfer(stake);
+        msg.sender.transfer(stake);
         emit Challenged(msg.sender, proofHash);
       } else {
         // challenge failed

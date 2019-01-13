@@ -27,23 +27,15 @@ contract('mintNote', function(accounts) {
     const mint = await zkdai.mint(...proof, {value: 10**18});
     assert.equal(await dai.balanceOf.call(zkdai.address), 5 * SCALING_FACTOR, 'Zkdai contract should have 5 dai tokens');
     assertEvent(mint.logs[0], 'Submitted', accounts[0], '0x02d554cdd75e795e9e3547843a66321a5ba4ab21c3cb141197b194f410ede8dc')
-
-    // const submission = await zkdai.submissions.call(submitNewNote.logs[0].args.proofHash);
-    // console.dir(submission, {depth: null});
   })
 
   it('challenge fails for correct proof', async function() {
     const proof = util.parseProof('./test/mintNoteProof.json');
     await dai.approve(zkdai.address, 5 * SCALING_FACTOR);
-    // console.log('calling verify with', ...proof)
-    const mint = await zkdai.mint(...proof, {value: 10**18});
-    // console.dir(mint, {depth: null});
+    await zkdai.mint(...proof, {value: 10**18});
 
     const params = proof.slice(0, proof.length - 1);
-    // console.log(...params)
     const challenge = await zkdai.challenge(...params); // omit sending public params again
-    // console.dir(challenge, {depth: null});
-
     assert.equal(challenge.logs[1].event, 'NoteStateChange')
     // @todo assert on challenge.logs[1].args.note
     assert.equal(challenge.logs[1].args.state, 1 /* committed */)
@@ -61,8 +53,6 @@ contract('mintNote', function(accounts) {
 
     const params = proof.slice(0, proof.length - 1);
     const challenge = await zkdai.challenge(...params); // omit sending public params again
-    // console.dir(challenge, {depth: null});
-
     assert.equal(challenge.logs[0].event, 'Challenged')
     assert.equal(challenge.logs[0].args.challenger, accounts[0]);
     assert.equal(challenge.logs[0].args.proofHash, proofHash)
@@ -79,7 +69,6 @@ contract('mintNote', function(accounts) {
     const commit = await zkdai.commit(proofHash);
     assert.equal(commit.logs[0].event, 'NoteStateChange')
     assert.equal(commit.logs[0].args.state, 1 /* committed */)
-    // console.dir(commit, {depth: null});
   })
 
   it('can not be challenged after cooldown period');
@@ -89,7 +78,6 @@ contract('mintNote', function(accounts) {
 function assertEvent(event, type, ...args) {
   assert.equal(event.event, type);
   args.forEach((arg, i) => {
-    // console.log(event.args[i])
     assert.equal(event.args[i], arg);
   })
 }

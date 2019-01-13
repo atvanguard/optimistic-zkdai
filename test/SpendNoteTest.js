@@ -20,26 +20,23 @@ contract('SpendNote', function(accounts) {
     const mint = await zkdai.mint(...proof, {value: 10**18});
     const proofHash = mint.logs[0].args.proofHash;
     await util.sleep(1); // wait out the cooldown period
-    const commit = await zkdai.commit(proofHash);
+    await zkdai.commit(proofHash);
   })
 
   it('spend', async function() {
     const spendProof = util.parseProof('./test/spendNoteProof.json');
     const spend = await zkdai.spend(...spendProof, {value: 10**18});
     assertEvent(spend.logs[0], 'Submitted', accounts[0], '0x610aa7aab595bcefc8d10d9039d1f24c1c771bb09d253b268ac43e42545b4a36')
-    // console.dir(spend, {depth: null});
   })
 
   it('challenge fails if valid proof was submitted', async function() {
     const spendProof = util.parseProof('./test/spendNoteProof.json');
-    const spend = await zkdai.spend(...spendProof, {value: 10**18});
-    // const proofHash = spend.logs[0].args.proofHash;
+    await zkdai.spend(...spendProof, {value: 10**18});
     
-    const params = spendProof.slice(0, spendProof.length - 1); // cut public params
     await zkdai.setCooldown(10); // larger cooldown, otherwise challenge period ends
-    const challenge = await zkdai.challenge(...params);
-    // console.dir(challenge, {depth: null});
 
+    const params = spendProof.slice(0, spendProof.length - 1); // cut public params
+    const challenge = await zkdai.challenge(...params);
     assert.equal(challenge.logs[1].event, 'NoteStateChange')
     // @todo assert on challenge.logs[1].args.note
     assert.equal(challenge.logs[1].args.state, 2 /* spent */)
@@ -49,7 +46,7 @@ contract('SpendNote', function(accounts) {
     assert.equal(challenge.logs[2].args.state, 1 /* committed */)
 
     assert.equal(challenge.logs[3].event, 'NoteStateChange')
-    // @todo assert on challenge.logs[1].args.note
+    // @todo assert on challenge.logs[3].args.note
     assert.equal(challenge.logs[3].args.state, 1 /* committed */)
   })
 
@@ -62,11 +59,10 @@ contract('SpendNote', function(accounts) {
     const spend = await zkdai.spend(...spendProof, {value: 10**18});
     const proofHash = spend.logs[0].args.proofHash;
     
-    const params = spendProof.slice(0, spendProof.length - 1); // cut public params
     await zkdai.setCooldown(10); // larger cooldown, otherwise challenge period ends
-    const challenge = await zkdai.challenge(...params);
-    // console.dir(challenge, {depth: null});
 
+    const params = spendProof.slice(0, spendProof.length - 1); // cut public params
+    const challenge = await zkdai.challenge(...params);
     assert.equal(challenge.logs[0].event, 'Challenged')
     assert.equal(challenge.logs[0].args.challenger, accounts[0]);
     assert.equal(challenge.logs[0].args.proofHash, proofHash);
@@ -76,7 +72,6 @@ contract('SpendNote', function(accounts) {
 function assertEvent(event, type, ...args) {
   assert.equal(event.event, type);
   args.forEach((arg, i) => {
-    // console.log(event.args[i])
     assert.equal(event.args[i], arg);
   })
 }

@@ -6,7 +6,10 @@ import "./ZkDaiBase.sol";
 contract MintNotes is MintNoteVerifier, ZkDaiBase {
   uint8 internal constant NUM_PUBLIC_INPUTS = 4;
 
-  event Submitted(address indexed submitter, bytes32 proofHash);
+  /**
+  * @dev Hashes the submitted proof and adds it to the submissions mapping that tracks
+  *      submission time, type, public inputs of the zkSnark and the submitter
+  */
   function submit(
       uint[2] a,
       uint[2] a_p,
@@ -23,10 +26,14 @@ contract MintNotes is MintNoteVerifier, ZkDaiBase {
       for(uint8 i = 0; i < NUM_PUBLIC_INPUTS; i++) {
         publicInput[i] = input[i];
       }
-      submissions[proofHash] = Submission(msg.sender, SubmissionType.Create, now, publicInput);
+      submissions[proofHash] = Submission(msg.sender, SubmissionType.Mint, now, publicInput);
       emit Submitted(msg.sender, proofHash);
   }
 
+  /**
+  * @dev Commits the proof i.e. Mints the note that originally came with the proof.
+  * @param proofHash Hash of the proof to be committed
+  */
   function mintCommit(bytes32 proofHash)
     internal {
       Submission storage submission = submissions[proofHash];
@@ -38,7 +45,11 @@ contract MintNotes is MintNoteVerifier, ZkDaiBase {
       emit NoteStateChange(note, State.Committed);
   }
 
-  event Challenged(address indexed challenger, bytes32 proofHash);
+  /**
+  * @dev Challenge the proof for mint step
+  * @notice params: a, a_p, b, b_p, c, c_p, h, k zkSnark parameters of the challenged proof
+  * @param proofHash Hash of the proof
+  */
   function challenge(
       uint[2] a,
       uint[2] a_p,

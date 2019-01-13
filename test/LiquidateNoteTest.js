@@ -33,7 +33,6 @@ contract('LiquidateNote', function(accounts) {
     await zkdai.commit(proofHash);
 
     const liquidate = await zkdai.liquidate(accounts[1], ...proof); // liquidate to 2nd account
-    // console.dir(liquidate, {depth: null});
     assert.equal(await dai.balanceOf.call(zkdai.address), 0, 'Zkdai contract should have 0 dai tokens');
     assert.equal(await dai.balanceOf.call(accounts[1]), 5 * SCALING_FACTOR, 'user should have 100 dai tokens');
     assert.equal(liquidate.logs[1].event, 'NoteStateChange')

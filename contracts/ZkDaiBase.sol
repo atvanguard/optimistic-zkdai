@@ -4,21 +4,28 @@ contract ZkDaiBase {
   uint256 public cooldown;
   uint256 public stake;
 
-  enum SubmissionType {Invalid, Create, Spend}
+  enum SubmissionType {Invalid, Mint, Spend}
   struct Submission {
     address submitter;
     SubmissionType sType;
     uint256 submittedAt;
     uint256[] publicInput;
   }
+  // maps proofHash to Submission
   mapping(bytes32 => Submission) public submissions;
 
   enum State {Invalid, Committed, Spent}
+  // maps note to State
   mapping(bytes32 => State) public notes;
   
   event NoteStateChange(bytes32 note, State state);
   event Submitted(address submitter, bytes32 proofHash);
+  event Challenged(address indexed challenger, bytes32 proofHash);
 
+  /**
+  * @dev Calculates the keccak256 of the zkSnark parameters
+  * @return proofHash
+  */
   function getProofHash(
       uint[2] a,
       uint[2] a_p,
@@ -30,10 +37,16 @@ contract ZkDaiBase {
       uint[2] k)
     internal
     pure
-    returns(bytes32) {
-      return keccak256(abi.encodePacked(a, a_p, b, b_p, c, c_p, h, k));
+    returns(bytes32 proofHash) {
+      proofHash = keccak256(abi.encodePacked(a, a_p, b, b_p, c, c_p, h, k));
   }
   
+  /**
+  * @dev Concatenates the 2 chunks of the sha256 hash of the note
+  * @notice This method is required due to the field limitations imposed by the zokrates zkSnark library
+  * @param _a Most significant 128 bits of the note hash
+  * @param _b Least significant 128 bits of the note hash
+  */
   function calcNoteHash(uint _a, uint _b)
     internal
     pure
