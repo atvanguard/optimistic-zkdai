@@ -2,6 +2,8 @@
 const crypto = require('crypto');
 const BN = require('bn.js');
 
+const SCALING_FACTOR = new BN('1000000000000000000');
+
 function getNoteHash(encodedNote) {
   const buf = Buffer.from(encodedNote, 'hex');
   const digest = crypto.createHash('sha256').update(buf).digest('hex');
@@ -21,7 +23,7 @@ function printZokratesCommand(params) {
 
 function getNoteParams(_key, _val, _nonce) {
   let key = new BN(_key, 16).toString(16); // 32 bytes = 256 bits
-  let val = new BN(_val, 16).toString(16, 32); // 16 bytes = 128 bits
+  let val = new BN(_val, 16).mul(SCALING_FACTOR).toString(16, 32); // 16 bytes = 128 bits
   let nonce = new BN(_nonce, 16).toString(16, 32);
   return getNoteHash(key + val + nonce).concat([key.slice(0, 32), key.slice(32), val, nonce])
 }

@@ -90,22 +90,30 @@ contract ZkDai is MintNotes, SpendNotes {
         }
     }
 
-    // function liquidate(
-    //     address to,
-    //     uint[2] a,
-    //     uint[2] a_p,
-    //     uint[2][2] b,
-    //     uint[2] b_p,
-    //     uint[2] c,
-    //     uint[2] c_p,
-    //     uint[2] h,
-    //     uint[2] k,
-    //     uint[4] input)
-    //   external {
-    //     LiquidateNotes.liquidateNote(a, a_p, b, b_p, c, c_p, h, k, input);
-    //     require(
-    //       DAI_TOKEN_ADDRESS.transfer(to, uint256(input[2]) /* value */),
-    //       'daiToken transfer failed'
-    //   );
-    // }
+    function liquidate(
+        address to,
+        uint[2] a,
+        uint[2] a_p,
+        uint[2][2] b,
+        uint[2] b_p,
+        uint[2] c,
+        uint[2] c_p,
+        uint[2] h,
+        uint[2] k,
+        uint[4] input)
+      external {
+        // zk circuit for mint and liquidate is same
+        require(
+          mintVerifyTx(a, a_p, b, b_p, c, c_p, h, k, input),
+          'Invalid zk proof'
+        );
+        bytes32 note = calcNoteHash(input[0], input[1]);
+        require(notes[note] == State.Committed, 'Note is either invalid or already spent');
+        notes[note] = State.Spent;
+        require(
+          DAI_TOKEN_ADDRESS.transfer(to, uint256(input[2]) /* value */),
+          'daiToken transfer failed'
+        );
+        emit NoteStateChange(note, State.Spent);
+    }
 }

@@ -26,7 +26,7 @@ contract('SpendNote', function(accounts) {
   it('spend', async function() {
     const spendProof = util.parseProof('./test/spendNoteProof.json');
     const spend = await zkdai.spend(...spendProof, {value: 10**18});
-    assertEvent(spend.logs[0], 'Submitted', accounts[0], '0x337d5b678e65b56d40251b2140283005dab29c56b771e3779717c5b42790b585')
+    assertEvent(spend.logs[0], 'Submitted', accounts[0], '0x610aa7aab595bcefc8d10d9039d1f24c1c771bb09d253b268ac43e42545b4a36')
     // console.dir(spend, {depth: null});
   })
 

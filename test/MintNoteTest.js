@@ -18,15 +18,15 @@ contract('mintNote', function(accounts) {
 
   it('transfers dai and mints note', async function() {
     // check dai balance and approve the zkdai contract to be able to move tokens
-    assert.equal(100 * SCALING_FACTOR, await dai.balanceOf.call(accounts[0]), '100 dai tokens were not assigned to the 1st account');
+    assert.equal(await dai.balanceOf.call(accounts[0]), 100 * SCALING_FACTOR, '100 dai tokens were not assigned to the 1st account');
     assert.equal(0, await dai.balanceOf.call(zkdai.address), 'Zkdai contract should have 0 dai tokens');
     await dai.approve(zkdai.address, 5 * SCALING_FACTOR);
     
     const proof = util.parseProof('./test/mintNoteProof.json');
     // the zk proof corresponds to a secret note of value 5
     const mint = await zkdai.mint(...proof, {value: 10**18});
-    assert.equal(5, await dai.balanceOf.call(zkdai.address), 'Zkdai contract should have 5 dai tokens');
-    assertEvent(mint.logs[0], 'Submitted', accounts[0], '0x3058b699c6de80b950400d2451707e836ed988f0f8e73ea8dee2826009562247')
+    assert.equal(await dai.balanceOf.call(zkdai.address), 5 * SCALING_FACTOR, 'Zkdai contract should have 5 dai tokens');
+    assertEvent(mint.logs[0], 'Submitted', accounts[0], '0x02d554cdd75e795e9e3547843a66321a5ba4ab21c3cb141197b194f410ede8dc')
 
     // const submission = await zkdai.submissions.call(submitNewNote.logs[0].args.proofHash);
     // console.dir(submission, {depth: null});
