@@ -1,4 +1,4 @@
-const ZkDai = artifacts.require("ZkDai.sol");
+const ZkDai = artifacts.require("TestZkDai.sol");
 const MockDai = artifacts.require("MockDai.sol");
 // const CreateNoteVerifier = artifacts.require("CreateNoteVerifier.sol");
 

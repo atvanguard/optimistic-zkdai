@@ -64,12 +64,11 @@ contract('mintNote', function(accounts) {
     // console.dir(challenge, {depth: null});
 
     assert.equal(challenge.logs[0].event, 'Challenged')
+    assert.equal(challenge.logs[0].args.challenger, accounts[0]);
     assert.equal(challenge.logs[0].args.proofHash, proofHash)
   })
 
-  it('can not be challenged after cooldown period');
-  
-  it.only('commit', async function() {
+  it('commit', async function() {
     zkdai = await ZkDai.new(0 /* low cooldown */, 10**18, dai.address);
     const proof = util.parseProof('./test/mintNoteProof.json');
     await dai.approve(zkdai.address, 5 * SCALING_FACTOR);
@@ -82,6 +81,9 @@ contract('mintNote', function(accounts) {
     assert.equal(commit.logs[0].args.state, 1 /* committed */)
     // console.dir(commit, {depth: null});
   })
+
+  it('can not be challenged after cooldown period');
+  it('can not be committed before cooldown period');
 })
 
 function assertEvent(event, type, ...args) {

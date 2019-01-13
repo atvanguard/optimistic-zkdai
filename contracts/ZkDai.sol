@@ -38,22 +38,24 @@ contract ZkDai is MintNotes, SpendNotes {
       MintNotes.submit(a, a_p, b, b_p, c, c_p, h, k, input);
   }
 
-    // function spend(
-    //     uint[2] a,
-    //     uint[2] a_p,
-    //     uint[2][2] b,
-    //     uint[2] b_p,
-    //     uint[2] c,
-    //     uint[2] c_p,
-    //     uint[2] h,
-    //     uint[2] k,
-    //     uint[7] input)
-    //   external {
-    //     // check that the first note (among public params) is valid and unspent 
-    //     bytes32 note = calcNoteHash(input[0], input[1]);
-    //     require(notes[note] == State.Committed, 'Note is either invalid or already spent');
-    //     SpendNotes.submit(a, a_p, b, b_p, c, c_p, h, k, input);
-    // }
+  function spend(
+      uint[2] a,
+      uint[2] a_p,
+      uint[2][2] b,
+      uint[2] b_p,
+      uint[2] c,
+      uint[2] c_p,
+      uint[2] h,
+      uint[2] k,
+      uint[7] input)
+    external
+    payable {
+      // check that the first note (among public params) is valid and unspent 
+      bytes32 note = calcNoteHash(input[0], input[1]);
+      require(notes[note] == State.Committed, 'Note is either invalid or already spent');
+      require(msg.value == stake, 'Invalid stake amount');
+      SpendNotes.submit(a, a_p, b, b_p, c, c_p, h, k, input);
+  }
 
     function challenge(
         uint[2] a,

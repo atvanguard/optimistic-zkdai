@@ -19,7 +19,7 @@ contract SpendNotes is SpendNoteVerifier, ZkDaiBase {
       uint[7] input)
     internal {
       bytes32 proofHash = getProofHash(a, a_p, b, b_p, c, c_p, h, k);
-      uint256[] memory publicInput = new uint256[](7);
+      uint256[] memory publicInput = new uint256[](NUM_PUBLIC_INPUTS);
       for(uint8 i = 0; i < NUM_PUBLIC_INPUTS; i++) {
         publicInput[i] = input[i];
       }
@@ -29,7 +29,6 @@ contract SpendNotes is SpendNoteVerifier, ZkDaiBase {
 
   function spendCommit(bytes32 proofHash)
     internal {
-      require(false, 'haha1');
       Submission storage submission = submissions[proofHash];
       bytes32[3] memory _notes = get3Notes(submission.publicInput);
       notes[_notes[0]] = State.Spent;
@@ -66,10 +65,10 @@ contract SpendNotes is SpendNoteVerifier, ZkDaiBase {
       for(uint i = 0; i < NUM_PUBLIC_INPUTS; i++) {
         input[i] = submission.publicInput[i];
       }
-      if (spendVerifyTx(a, a_p, b, b_p, c, c_p, h, k, input)) {
+      if (!spendVerifyTx(a, a_p, b, b_p, c, c_p, h, k, input)) {
         // challenge passed
         delete submissions[proofHash];
-        msg.sender.transfer(stake);
+        // msg.sender.transfer(stake);
         emit Challenged(msg.sender, proofHash);
       } else {
         // challenge failed
