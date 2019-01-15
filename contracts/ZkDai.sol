@@ -132,7 +132,7 @@ contract ZkDai is MintNotes, SpendNotes, LiquidateNotes {
     public
   {
       Submission storage submission = submissions[proofHash];
-      // require(submission.sType != SubmissionType.Invalid, "proofHash is invalid");
+      require(submission.sType != SubmissionType.Invalid, "proofHash is invalid");
       require(submission.submittedAt + cooldown < now, "Note is still hot");
       if (submission.sType == SubmissionType.Mint) {
         mintCommit(proofHash);
