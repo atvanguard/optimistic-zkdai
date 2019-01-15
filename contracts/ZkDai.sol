@@ -1,19 +1,22 @@
 pragma solidity ^0.4.25;
 
-import 'openzeppelin-solidity/contracts/token/ERC20/ERC20.sol';
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./MintNotes.sol";
 import "./SpendNotes.sol";
 import "./LiquidateNotes.sol";
 
+
 contract ZkDai is MintNotes, SpendNotes, LiquidateNotes {
 
-  modifier validStake(uint256 _stake) {
+  modifier validStake(uint256 _stake)
+  {
       require(_stake == stake, "Invalid stake amount");
       _;
   }
 
   constructor(uint256 _cooldown, uint256 _stake, address daiTokenAddress)
-    public {
+    public
+  {
       cooldown = _cooldown;
       stake = _stake;
       dai = ERC20(daiTokenAddress);
@@ -36,7 +39,8 @@ contract ZkDai is MintNotes, SpendNotes, LiquidateNotes {
       uint256[4] input)
     external
     payable
-    validStake(msg.value) {
+    validStake(msg.value)
+  {
       require(
         dai.transferFrom(msg.sender, address(this), uint256(input[2]) /* value */),
         "daiToken transfer failed"
@@ -61,7 +65,8 @@ contract ZkDai is MintNotes, SpendNotes, LiquidateNotes {
       uint256[7] input)
     external
     payable
-    validStake(msg.value) {
+    validStake(msg.value)
+  {
       SpendNotes.submit(a, a_p, b, b_p, c, c_p, h, k, input);
   }
 
@@ -84,7 +89,8 @@ contract ZkDai is MintNotes, SpendNotes, LiquidateNotes {
       uint256[4] input)
     external
     payable
-    validStake(msg.value) {
+    validStake(msg.value)
+  {
       LiquidateNotes.submit(to, a, a_p, b, b_p, c, c_p, h, k, input);
   }
 
@@ -103,7 +109,8 @@ contract ZkDai is MintNotes, SpendNotes, LiquidateNotes {
       uint256[2] c_p,
       uint256[2] h,
       uint256[2] k)
-    external {
+    external
+  {
       bytes32 proofHash = getProofHash(a, a_p, b, b_p, c, c_p, h, k);
       Submission storage submission = submissions[proofHash];
       require(submission.sType != SubmissionType.Invalid, "Corresponding hash of proof doesnt exist");
@@ -122,7 +129,8 @@ contract ZkDai is MintNotes, SpendNotes, LiquidateNotes {
   * @param proofHash Hash of the proof that needs to be committed
   */
   function commit(bytes32 proofHash)
-    public {
+    public
+  {
       Submission storage submission = submissions[proofHash];
       // require(submission.sType != SubmissionType.Invalid, "proofHash is invalid");
       require(submission.submittedAt + cooldown < now, "Note is still hot");

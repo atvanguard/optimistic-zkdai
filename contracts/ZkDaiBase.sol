@@ -1,6 +1,7 @@
 pragma solidity ^0.4.25;
 
-import 'openzeppelin-solidity/contracts/token/ERC20/ERC20.sol';
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+
 
 contract ZkDaiBase {
   uint256 public cooldown;
@@ -40,7 +41,8 @@ contract ZkDaiBase {
       uint256[2] k)
     internal
     pure
-    returns(bytes32 proofHash) {
+    returns(bytes32 proofHash)
+  {
       proofHash = keccak256(abi.encodePacked(a, a_p, b, b_p, c, c_p, h, k));
   }
   
@@ -53,7 +55,8 @@ contract ZkDaiBase {
   function calcNoteHash(uint _a, uint _b)
     internal
     pure
-    returns(bytes32 note) {
+    returns(bytes32 note)
+  {
       bytes16 a = bytes16(_a);
       bytes16 b = bytes16(_b);
       bytes memory _note = new bytes(32);
@@ -68,7 +71,8 @@ contract ZkDaiBase {
   function _bytesToBytes32(bytes b, uint offset)
     internal
     pure
-    returns (bytes32 out) {
+    returns (bytes32 out)
+  {
       for (uint i = 0; i < 32; i++) {
         out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);
       }

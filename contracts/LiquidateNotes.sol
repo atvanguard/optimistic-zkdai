@@ -3,6 +3,7 @@ pragma solidity ^0.4.25;
 import {Verifier as MintNoteVerifier} from "./verifiers/MintNoteVerifier.sol";
 import "./ZkDaiBase.sol";
 
+
 contract LiquidateNotes is MintNoteVerifier, ZkDaiBase {
   uint8 internal constant NUM_PUBLIC_INPUTS = 4;
 
@@ -21,7 +22,8 @@ contract LiquidateNotes is MintNoteVerifier, ZkDaiBase {
       uint256[2] h,
       uint256[2] k,
       uint256[4] input)
-    internal {
+    internal
+  {
       bytes32 proofHash = getProofHash(a, a_p, b, b_p, c, c_p, h, k);
       uint256[] memory publicInput = new uint256[](NUM_PUBLIC_INPUTS + 1);
       for(uint8 i = 0; i < NUM_PUBLIC_INPUTS; i++) {
@@ -38,7 +40,8 @@ contract LiquidateNotes is MintNoteVerifier, ZkDaiBase {
   * @param proofHash Hash of the proof to be committed
   */
   function liquidateCommit(bytes32 proofHash)
-    internal {
+    internal
+  {
       Submission storage submission = submissions[proofHash];
       bytes32 note = calcNoteHash(submission.publicInput[0], submission.publicInput[1]);
       require(notes[note] == State.Committed, "Note is either invalid or already spent");
@@ -70,7 +73,8 @@ contract LiquidateNotes is MintNoteVerifier, ZkDaiBase {
       uint256[2] h,
       uint256[2] k,
       bytes32 proofHash)
-    internal {
+    internal
+    {
       Submission storage submission = submissions[proofHash];
       uint256[NUM_PUBLIC_INPUTS] memory input;
       for(uint i = 0; i < NUM_PUBLIC_INPUTS; i++) {
