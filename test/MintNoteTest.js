@@ -19,7 +19,7 @@ contract('mintNote', function(accounts) {
   it('transfers dai and mints note', async function() {
     // check dai balance and approve the zkdai contract to be able to move tokens
     assert.equal(await dai.balanceOf.call(accounts[0]), 100 * SCALING_FACTOR, '100 dai tokens were not assigned to the 1st account');
-    assert.equal(0, await dai.balanceOf.call(zkdai.address), 'Zkdai contract should have 0 dai tokens');
+    assert.equal(await dai.balanceOf.call(zkdai.address), 0, 'Zkdai contract should have 0 dai tokens');
     await dai.approve(zkdai.address, 5 * SCALING_FACTOR);
     
     const proof = util.parseProof('./test/mintNoteProof.json');
