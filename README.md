@@ -16,6 +16,7 @@
 
 ### Tests
 ```shell
+ganache-cli
 npm test
 ```
 

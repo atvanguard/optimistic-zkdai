@@ -6,11 +6,14 @@
   "scripts": {
     "compile": "truffle compile",
     "migrate": "truffle migrate --reset",
-    "test": "truffle test"
+    "test": "truffle test",
+    "lint": "solium --dir ./contracts",
+    "lint:fix": "solium -d contracts/ --fix"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "ethlint": "^1.2.2",
     "openzeppelin-solidity": "^2.0.0",
     "truffle": "^5.0.0-beta.1"
   },

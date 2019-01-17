@@ -1,0 +1,7 @@
+{
+    "extends": "solium:all",
+    "plugins": ["security"],
+    "rules": {
+        "lbrace": "error"
+    }
+}

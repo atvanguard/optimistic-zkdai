@@ -4,7 +4,7 @@ import {Verifier as MintNoteVerifier} from "./verifiers/MintNoteVerifier.sol";
 import "./ZkDaiBase.sol";
 
 
-contract MintNotes is MintNoteVerifier, ZkDaiBase {
+contract LiquidateNotes is MintNoteVerifier, ZkDaiBase {
   uint8 internal constant NUM_PUBLIC_INPUTS = 4;
 
   /**
@@ -12,6 +12,7 @@ contract MintNotes is MintNoteVerifier, ZkDaiBase {
   *      submission time, type, public inputs of the zkSnark and the submitter
   */
   function submit(
+      address to,
       uint256[2] a,
       uint256[2] a_p,
       uint256[2][2] b,
@@ -24,11 +25,13 @@ contract MintNotes is MintNoteVerifier, ZkDaiBase {
     internal
   {
       bytes32 proofHash = getProofHash(a, a_p, b, b_p, c, c_p, h, k);
-      uint256[] memory publicInput = new uint256[](4);
+      uint256[] memory publicInput = new uint256[](NUM_PUBLIC_INPUTS + 1);
       for(uint8 i = 0; i < NUM_PUBLIC_INPUTS; i++) {
         publicInput[i] = input[i];
       }
-      submissions[proofHash] = Submission(msg.sender, SubmissionType.Mint, now, publicInput);
+      // last element is the beneficiary to whom the liquidated dai will be transferred 
+      publicInput[NUM_PUBLIC_INPUTS] = uint256(to);
+      submissions[proofHash] = Submission(msg.sender, SubmissionType.Liquidate, now, publicInput);
       emit Submitted(msg.sender, proofHash);
   }
 
@@ -36,18 +39,23 @@ contract MintNotes is MintNoteVerifier, ZkDaiBase {
   * @dev Commits the proof i.e. Mints the note that originally came with the proof.
   * @param proofHash Hash of the proof to be committed
   */
-  function mintCommit(bytes32 proofHash)
+  function liquidateCommit(bytes32 proofHash)
     internal
   {
       Submission storage submission = submissions[proofHash];
-      // check that the first note (among public params) is not already minted 
       bytes32 note = calcNoteHash(submission.publicInput[0], submission.publicInput[1]);
-      require(notes[note] == State.Invalid, "Note was already minted");
-      notes[note] = State.Committed;
+      require(notes[note] == State.Committed, "Note is either invalid or already spent");
 
-      delete submissions[proofHash];
+      notes[note] = State.Spent;
       submission.submitter.transfer(stake);
-      emit NoteStateChange(note, State.Committed);
+      address to = address(uint160(submission.publicInput[NUM_PUBLIC_INPUTS])); // see submit above
+      uint256 value = submission.publicInput[2];
+      delete submissions[proofHash];
+      require(
+        dai.transfer(to, value),
+        "daiToken transfer failed"
+      );
+      emit NoteStateChange(note, State.Spent);
   }
 
   /**
@@ -66,12 +74,13 @@ contract MintNotes is MintNoteVerifier, ZkDaiBase {
       uint256[2] k,
       bytes32 proofHash)
     internal
-  {
+    {
       Submission storage submission = submissions[proofHash];
       uint256[NUM_PUBLIC_INPUTS] memory input;
       for(uint i = 0; i < NUM_PUBLIC_INPUTS; i++) {
         input[i] = submission.publicInput[i];
       }
+      // zk circuit for mint and liquidate is same
       if (!mintVerifyTx(a, a_p, b, b_p, c, c_p, h, k, input)) {
         // challenge passed
         delete submissions[proofHash];
@@ -79,7 +88,7 @@ contract MintNotes is MintNoteVerifier, ZkDaiBase {
         emit Challenged(msg.sender, proofHash);
       } else {
         // challenge failed
-        mintCommit(proofHash);
+        liquidateCommit(proofHash);
       }
   }
 }

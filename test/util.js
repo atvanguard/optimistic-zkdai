@@ -16,7 +16,6 @@ function parseProof(file) {
     proofJson = proofJson.replace(p, `"${p.slice(0, p.length-1)}",`)
   })
   proofJson = JSON.parse(proofJson);
-
   const proof = proofJson.proof;
   const input = proofJson.input;
   input.forEach((i, key) => {
